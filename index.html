@@ -5,144 +5,102 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>利用者荷物チェック管理</title>
 
-    <!-- iOSアプリ化のための設定 -->
+    <!-- iOS全画面対応 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="荷物管理">
     <link rel="apple-touch-icon" href="https://placehold.jp/24/2563eb/ffffff/180x180.png?text=荷物">
 
-    <!-- 外部ライブラリ -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { 
-            font-family: 'Inter', 'Hiragino Kaku Gothic ProN', sans-serif; 
-            -webkit-tap-highlight-color: transparent;
-        }
+        body { font-family: 'Inter', 'Hiragino Kaku Gothic ProN', sans-serif; -webkit-tap-highlight-color: transparent; }
         .ios-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
         .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: bold; }
         input[type="checkbox"]:checked { background-color: #10b981; border-color: #10b981; }
-        
-        #image-modal, #draw-modal, #custom-modal, #history-modal { transition: opacity 0.2s ease; }
         .modal-hidden { opacity: 0; pointer-events: none; display: none !important; }
-        
-        #fab-add {
-            position: fixed;
-            bottom: 2.5rem;
-            right: 1.5rem;
-            z-index: 40;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 3.8rem;
-            height: 3.8rem;
-            border-radius: 9999px;
-            box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.5);
-            transition: transform 0.2s;
-        }
+        #fab-add { position: fixed; bottom: 2.5rem; right: 1.5rem; z-index: 40; display: flex; align-items: center; justify-content: center; width: 3.8rem; height: 3.8rem; border-radius: 9999px; box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.5); transition: transform 0.2s; }
         #fab-add:active { transform: scale(0.9); }
         canvas { touch-action: none; }
         .diff-added { background-color: #dcfce7; color: #166534; padding: 2px 4px; border-radius: 4px; }
         .diff-removed { background-color: #fee2e2; color: #991b1b; padding: 2px 4px; border-radius: 4px; text-decoration: line-through; }
         header { padding-top: env(safe-area-inset-top, 1rem); }
-        
         .category-group { border-left: 4px solid #3b82f6; padding-left: 1rem; margin-bottom: 1.5rem; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
+<body class="bg-gray-50 text-gray-900 text-center">
 
 <div id="app" class="max-w-full md:max-w-md mx-auto min-h-screen pb-32 relative">
-    <header class="bg-white border-b sticky top-0 z-20 p-4 flex justify-between items-center text-center">
-        <div class="w-full">
-            <h1 class="text-xl font-bold text-blue-600">荷物管理</h1>
-        </div>
+    <header class="bg-white border-b sticky top-0 z-20 p-4">
+        <h1 class="text-xl font-bold text-blue-600">荷物管理</h1>
     </header>
 
     <div id="tab-nav" class="bg-white border-b sticky top-[61px] z-10 flex text-sm text-gray-500">
-        <button onclick="switchTab('in')" id="tab-in" class="flex-1 py-4 text-center tab-active transition-all">利用中</button>
-        <button onclick="switchTab('out')" id="tab-out" class="flex-1 py-4 text-center transition-all">退居済み</button>
+        <button onclick="switchTab('in')" id="tab-in" class="flex-1 py-4 tab-active">利用中</button>
+        <button onclick="switchTab('out')" id="tab-out" class="flex-1 py-4">退居済み</button>
     </div>
 
     <main id="content" class="p-4 space-y-4">
-        <!-- 一覧表示 -->
-        <div id="view-list" class="space-y-4">
+        <div id="view-list" class="space-y-4 text-left">
             <div id="user-list-container" class="space-y-3">
-                <p class="text-center text-gray-400 py-10 text-sm">読み込み中...</p>
+                <p class="text-center text-gray-400 py-10">読み込み中...</p>
             </div>
         </div>
 
-        <!-- 登録・編集フォーム -->
         <div id="view-form" class="hidden space-y-4">
-            <div class="bg-white p-6 rounded-3xl ios-shadow space-y-6 border">
-                <h2 id="form-title" class="text-lg font-bold border-b pb-2 text-gray-800 text-center">新規登録</h2>
-                
-                <div class="space-y-5">
+            <div class="bg-white p-6 rounded-3xl ios-shadow space-y-6 border text-left">
+                <h2 id="form-title" class="text-lg font-bold border-b pb-2 text-center">新規登録</h2>
+                <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-1">利用者氏名 <span class="text-red-500">*</span></label>
-                        <input type="text" id="reg-name" class="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500" placeholder="例：山田 太郎">
+                        <input type="text" id="reg-name" class="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500" placeholder="氏名">
                     </div>
-
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-1">入居日</label>
-                        <input type="date" id="reg-date" class="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <input type="date" id="reg-date" class="w-full border rounded-xl p-3 outline-none bg-white">
                     </div>
-
-                    <!-- カテゴリ別荷物登録エリア -->
-                    <div id="category-registration-root" class="space-y-8 pt-4 border-t">
+                    <div id="category-registration-root" class="space-y-6 pt-4 border-t">
                         <p class="text-sm font-bold text-blue-600 text-center">荷物の登録 (カテゴリ別)</p>
                     </div>
-
                     <div class="pt-4 border-t">
                         <label id="staff-label" class="block text-sm font-bold text-gray-700 mb-1">担当者名 <span class="text-red-500">*</span></label>
-                        <input type="text" id="reg-staff" class="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500" placeholder="スタッフ氏名">
+                        <input type="text" id="reg-staff" class="w-full border rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500" placeholder="氏名">
                     </div>
                 </div>
-
                 <div class="flex flex-col gap-2 pt-4">
-                    <button id="save-user" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg transition active:scale-95">保存を確定する</button>
-                    <button id="cancel-reg" class="w-full bg-gray-100 text-gray-600 py-3 rounded-2xl font-bold transition active:scale-95">キャンセル</button>
-                    <button id="delete-user-btn" class="hidden w-full bg-red-50 text-red-500 py-3 rounded-xl font-bold border border-red-100 mt-4 transition active:scale-95">この利用者を完全に削除</button>
+                    <button id="save-user" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg">保存を確定する</button>
+                    <button id="cancel-reg" class="w-full bg-gray-100 text-gray-600 py-3 rounded-2xl font-bold">キャンセル</button>
+                    <button id="delete-user-btn" class="hidden w-full bg-red-50 text-red-500 py-3 rounded-2xl font-bold border border-red-100 mt-4">この利用者を完全に削除</button>
                 </div>
             </div>
         </div>
 
-        <!-- 詳細プレビュー画面 -->
         <div id="view-detail" class="hidden">
             <div id="detail-container"></div>
         </div>
     </main>
 
-    <!-- フローティング登録ボタン (+) -->
     <button id="fab-add" class="bg-blue-600 text-white shadow-xl">
         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
     </button>
 
-    <!-- 写真拡大プレビュー -->
-    <div id="image-modal" class="modal-hidden fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4 text-center">
-        <button onclick="closeImagePreview()" class="absolute top-4 right-4 text-white p-2">
-            <i data-lucide="x" class="w-8 h-8"></i>
-        </button>
+    <div id="image-modal" class="modal-hidden fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4">
         <img id="modal-img" src="" class="max-w-full max-h-[75vh] object-contain rounded-lg shadow-2xl">
-        <p id="modal-caption" class="text-white mt-4 font-bold text-lg text-center"></p>
-        <button onclick="closeImagePreview()" class="mt-8 bg-white/20 text-white px-8 py-3 rounded-full font-bold border border-white/40 transition active:scale-95">プレビューを閉じる</button>
+        <p id="modal-caption" class="text-white mt-4 font-bold text-lg"></p>
+        <button onclick="closeImagePreview()" class="mt-8 bg-white/20 text-white px-8 py-3 rounded-full font-bold border border-white/40">プレビューを閉じる</button>
     </div>
 
-    <!-- お絵描き編集 -->
     <div id="draw-modal" class="modal-hidden fixed inset-0 z-50 bg-black flex flex-col items-center justify-between">
-        <div class="w-full p-4 flex justify-between items-center bg-gray-900 text-white border-b border-gray-800">
-            <button onclick="closeDrawModal()" class="p-2 text-sm">キャンセル</button>
+        <div class="w-full p-4 flex justify-between items-center bg-gray-900 text-white">
+            <button onclick="closeDrawModal()" class="p-2">キャンセル</button>
             <span class="font-bold">写真に書き込み</span>
-            <button onclick="saveDrawing()" class="bg-blue-600 px-4 py-2 rounded-lg font-bold text-sm">保存</button>
+            <button onclick="saveDrawing()" class="bg-blue-600 px-4 py-2 rounded-lg font-bold">保存</button>
         </div>
-        <div class="relative flex-1 w-full flex items-center justify-center overflow-hidden bg-black text-center">
-            <canvas id="draw-canvas"></canvas>
-        </div>
-        <div class="w-full p-6 flex justify-around items-center bg-gray-900 border-t border-gray-800">
-            <button onclick="confirmClearCanvas()" class="text-white flex flex-col items-center gap-1 text-[10px]">
-                <i data-lucide="rotate-ccw" class="w-5 h-5"></i>全部消す
-            </button>
+        <canvas id="draw-canvas"></canvas>
+        <div class="w-full p-6 flex justify-around items-center bg-gray-900">
+            <button onclick="confirmClearCanvas()" class="text-white text-[10px]"><i data-lucide="rotate-ccw"></i>全部消す</button>
             <div class="flex gap-4">
                 <div class="w-8 h-8 rounded-full bg-red-500 border-2 border-white" onclick="setPenColor('#ef4444')"></div>
                 <div class="w-8 h-8 rounded-full bg-blue-500 border-2 border-white" onclick="setPenColor('#3b82f6')"></div>
@@ -152,42 +110,36 @@
         </div>
     </div>
 
-    <!-- 履歴詳細モーダル -->
-    <div id="history-modal" class="modal-hidden fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4">
+    <div id="history-modal" class="modal-hidden fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4 text-left">
         <div class="bg-white w-full max-w-md rounded-3xl overflow-hidden flex flex-col max-h-[80vh] shadow-2xl">
-            <div class="p-4 bg-gray-100 border-b flex justify-between items-center px-6">
-                <h3 class="font-bold text-gray-800">編集内容の詳細</h3>
+            <div class="p-4 bg-gray-100 border-b flex justify-between items-center">
+                <h3 class="font-bold text-gray-800">修正箇所</h3>
                 <button onclick="closeHistoryModal()" class="text-gray-500 p-2"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             <div id="history-detail-content" class="p-6 overflow-y-auto space-y-4"></div>
-            <div class="p-4 border-t bg-gray-50">
-                <button onclick="closeHistoryModal()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold transition active:scale-95">閉じる</button>
-            </div>
+            <div class="p-4 border-t bg-gray-50"><button onclick="closeHistoryModal()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">閉じる</button></div>
         </div>
     </div>
 
-    <!-- カスタムダイアログ -->
     <div id="custom-modal" class="modal-hidden fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-6 text-center">
         <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl space-y-4">
             <div id="modal-icon-container" class="flex justify-center"></div>
             <h3 id="modal-title" class="font-bold text-gray-800 text-lg"></h3>
             <p id="modal-message" class="text-sm text-gray-500 whitespace-pre-line"></p>
             <div class="flex gap-2 pt-2">
-                <button id="modal-cancel-btn" class="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl font-bold text-sm transition active:scale-95">キャンセル</button>
-                <button id="modal-confirm-btn" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-sm transition active:scale-95">はい</button>
+                <button id="modal-cancel-btn" class="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl font-bold">キャンセル</button>
+                <button id="modal-confirm-btn" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold">はい</button>
             </div>
         </div>
     </div>
 
-    <div class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t p-3 text-center text-[10px] text-gray-400 pointer-events-none">
-        退居済みデータは60日後に自動削除されます
-    </div>
+    <div class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t p-3 text-center text-[10px] text-gray-400">退居済みデータは60日後に自動削除されます</div>
 </div>
 
 <script>
-    const DB_KEY = "luggage_check_pwa_v6_categorized";
-    const CATEGORIES = ["上衣", "ズボン", "肌着", "ももひき", "靴下", "その他"];
-    const LOCATIONS = ["SS棚", "倉庫", "居室", "事務所"];
+    // 【重要】既存のデータキーと同じにすることでデータが引き継がれます
+    const DB_KEY = "luggage_check_pwa_v5_gh_final";
+    const CATEGORIES = ["上衣", "ズボン", "肌着", "ももひき", "靴下", "パンツ", "薬（ユニット管理）", "その他"];
     
     let users = [];
     let currentLuggageFiles = []; 
@@ -198,44 +150,31 @@
     let ctx = null;
     let penColor = '#ef4444';
 
-    const views = {
-        list: document.getElementById('view-list'),
-        form: document.getElementById('view-form'),
-        detail: document.getElementById('view-detail')
-    };
+    const views = { list: document.getElementById('view-list'), form: document.getElementById('view-form'), detail: document.getElementById('view-detail') };
     const fabAdd = document.getElementById('fab-add');
 
-    function refreshIcons() {
-        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
-    }
-
-    function formatDateForInput(dateObj) {
-        const d = new Date(dateObj);
-        let m = '' + (d.getMonth() + 1), day = '' + d.getDate(), y = d.getFullYear();
-        if (m.length < 2) m = '0' + m; if (day.length < 2) day = '0' + day;
-        return [y, m, day].join('-');
-    }
-
-    function showCustomModal({ title, message, icon, confirmText = 'はい', confirmColor = 'bg-blue-600', onConfirm }) {
-        const modal = document.getElementById('custom-modal');
-        const confirmBtn = document.getElementById('modal-confirm-btn');
-        document.getElementById('modal-title').innerText = title;
-        document.getElementById('modal-message').innerText = message;
-        confirmBtn.innerText = confirmText;
-        confirmBtn.className = `flex-1 ${confirmColor} text-white py-3 rounded-xl font-bold text-sm transition active:scale-95`;
-        document.getElementById('modal-icon-container').innerHTML = icon ? `<div class="p-3 bg-gray-50 rounded-full">${icon}</div>` : '';
-        modal.classList.remove('modal-hidden');
-        refreshIcons();
-        const close = () => modal.classList.add('modal-hidden');
-        confirmBtn.onclick = () => { onConfirm(); close(); };
-        document.getElementById('modal-cancel-btn').onclick = close;
+    // データ移行機能：古い形式のデータがあれば新しい形式（カテゴリ付）に自動変換する
+    function migrateData(data) {
+        if (!Array.isArray(data)) return [];
+        return data.map(user => {
+            if (user.luggage && Array.isArray(user.luggage)) {
+                user.luggage = user.luggage.map(item => {
+                    // カテゴリがない古いデータは「その他」に設定
+                    if (!item.category) item.category = "その他";
+                    return item;
+                });
+            }
+            return user;
+        });
     }
 
     async function init() {
         try {
-            if (typeof localforage === 'undefined') throw new Error("LocalForage not loaded");
-            const data = await localforage.getItem(DB_KEY);
-            users = Array.isArray(data) ? data : [];
+            if (typeof localforage === 'undefined') throw new Error("localforage error");
+            let data = await localforage.getItem(DB_KEY);
+            // 移行処理を実行
+            users = migrateData(data);
+            await saveToDB(); // 移行後のデータを上書き保存
             cleanOldData();
             renderUserList();
             initDrawingCanvas();
@@ -246,143 +185,81 @@
         }
     }
 
-    async function cleanOldData() {
-        const now = Date.now();
-        const sixtyDaysMs = 60 * 24 * 60 * 60 * 1000;
-        users = users.filter(user => {
-            if (user.status === 'out' && user.checkoutDate) { return (now - user.checkoutDate) < sixtyDaysMs; }
-            return true;
-        });
-        await saveToDB();
+    function refreshIcons() { if (typeof lucide !== 'undefined') lucide.createIcons(); }
+    async function saveToDB() { try { await localforage.setItem(DB_KEY, users); renderUserList(); } catch (err) { console.error(err); } }
+    function switchTab(tab) { currentTab = tab; document.getElementById('tab-in').classList.toggle('tab-active', tab === 'in'); document.getElementById('tab-out').classList.toggle('tab-active', tab === 'out'); renderUserList(); }
+    function showView(v) { Object.values(views).forEach(el => el.classList.add('hidden')); views[v].classList.remove('hidden'); fabAdd.classList.toggle('hidden', v !== 'list'); document.getElementById('tab-nav').classList.toggle('hidden', v !== 'list'); refreshIcons(); window.scrollTo(0,0); }
+
+    function formatDateForInput(dObj) { const d = new Date(dObj); let m = '' + (d.getMonth() + 1), dy = '' + d.getDate(), y = d.getFullYear(); if (m.length < 2) m = '0' + m; if (dy.length < 2) dy = '0' + dy; return [y, m, dy].join('-'); }
+    
+    function showCustomModal({ title, message, icon, confirmText = 'はい', confirmColor = 'bg-blue-600', onConfirm }) {
+        const m = document.getElementById('custom-modal'), cBtn = document.getElementById('modal-confirm-btn');
+        document.getElementById('modal-title').innerText = title; document.getElementById('modal-message').innerText = message;
+        cBtn.innerText = confirmText; cBtn.className = `flex-1 ${confirmColor} text-white py-3 rounded-xl font-bold transition active:scale-95`;
+        document.getElementById('modal-icon-container').innerHTML = icon ? `<div class="p-3 bg-gray-50 rounded-full">${icon}</div>` : '';
+        m.classList.remove('modal-hidden'); refreshIcons();
+        cBtn.onclick = () => { onConfirm(); m.classList.add('modal-hidden'); };
+        document.getElementById('modal-cancel-btn').onclick = () => m.classList.add('modal-hidden');
     }
 
-    async function saveToDB() {
-        try { await localforage.setItem(DB_KEY, users); renderUserList(); } catch (err) { console.error(err); }
-    }
-
-    function switchTab(tab) {
-        currentTab = tab;
-        document.getElementById('tab-in').classList.toggle('tab-active', tab === 'in');
-        document.getElementById('tab-out').classList.toggle('tab-active', tab === 'out');
-        renderUserList();
-    }
-
-    function showView(viewName) {
-        Object.values(views).forEach(v => v.classList.add('hidden'));
-        views[viewName].classList.remove('hidden');
-        const isList = viewName === 'list';
-        fabAdd.classList.toggle('hidden', !isList);
-        document.getElementById('tab-nav').classList.toggle('hidden', !isList);
-        refreshIcons(); window.scrollTo(0,0);
-    }
-
-    fabAdd.onclick = () => {
-        editingUserId = null; resetForm();
-        document.getElementById('form-title').innerText = "新規登録";
-        document.getElementById('reg-date').value = formatDateForInput(new Date());
-        document.getElementById('delete-user-btn').classList.add('hidden');
-        renderRegistrationForm();
-        showView('form');
-    };
-
+    fabAdd.onclick = () => { editingUserId = null; resetForm(); document.getElementById('form-title').innerText = "新規登録"; document.getElementById('reg-date').value = formatDateForInput(new Date()); document.getElementById('delete-user-btn').classList.add('hidden'); renderRegistrationForm(); showView('form'); };
     document.getElementById('cancel-reg').onclick = () => showView('list');
 
-    function resetForm() {
-        document.getElementById('reg-name').value = '';
-        document.getElementById('reg-staff').value = '';
-        currentLuggageFiles = [];
-    }
-
+    function resetForm() { document.getElementById('reg-name').value = ''; document.getElementById('reg-staff').value = ''; currentLuggageFiles = []; }
+    
     function renderRegistrationForm() {
         const root = document.getElementById('category-registration-root');
         root.innerHTML = CATEGORIES.map(cat => `
             <div class="category-group">
-                <div class="flex justify-between items-center mb-2">
+                <div class="flex justify-between items-center mb-2 px-1">
                     <h3 class="font-bold text-gray-800">${cat}</h3>
-                    <button type="button" onclick="triggerPhotoUpload('${cat}')" class="flex items-center gap-1 text-[10px] font-bold bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full border border-blue-100">
-                        <i data-lucide="plus" class="w-3 h-3"></i> 写真追加
-                    </button>
+                    <button type="button" onclick="triggerPhotoUpload('${cat}')" class="text-[10px] font-bold bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full border border-blue-100 active:scale-90 transition">+ 追加</button>
                 </div>
                 <div id="previews-${cat}" class="grid grid-cols-2 gap-3 min-h-[40px]"></div>
-            </div>
-        `).join('') + `<input type="file" id="shared-file-input" accept="image/*" multiple class="hidden">`;
-        
-        refreshIcons();
+            </div>`).join('') + `<input type="file" id="shared-input" accept="image/*" multiple class="hidden">`;
         renderCurrentLuggageInForm();
     }
 
-    let activeCategory = null;
-    function triggerPhotoUpload(cat) {
-        activeCategory = cat;
-        document.getElementById('shared-file-input').click();
-    }
-
+    let activeCat = null;
+    function triggerPhotoUpload(cat) { activeCat = cat; document.getElementById('shared-input').click(); }
     document.addEventListener('change', (e) => {
-        if (e.target.id === 'shared-file-input') {
-            const files = Array.from(e.target.files);
-            files.forEach(file => {
+        if (e.target.id === 'shared-input') {
+            Array.from(e.target.files).forEach(file => {
                 const reader = new FileReader();
-                reader.onload = (re) => {
-                    currentLuggageFiles.push({
-                        id: Date.now() + Math.random(),
-                        category: activeCategory,
-                        image: re.target.result,
-                        name: '',
-                        location: '居室', // デフォルト値を「居室」に変更
-                        checked: false
-                    });
-                    renderCurrentLuggageInForm();
-                };
+                reader.onload = (re) => { currentLuggageFiles.push({ id: Date.now() + Math.random(), category: activeCat, image: re.target.result, name: '', checked: false }); renderCurrentLuggageInForm(); };
                 reader.readAsDataURL(file);
             });
-            e.target.value = ""; 
+            e.target.value = "";
         }
     });
 
     function renderCurrentLuggageInForm() {
         CATEGORIES.forEach(cat => {
-            const container = document.getElementById(`previews-${cat}`);
-            const items = currentLuggageFiles.filter(l => l.category === cat);
-            
-            if (items.length === 0) {
-                container.innerHTML = `<p class="col-span-2 text-center text-[10px] text-gray-300 py-4 italic border border-dashed rounded-xl">写真は未登録です</p>`;
-                return;
-            }
-
-            container.innerHTML = items.map((item) => `
+            const items = currentLuggageFiles.filter(l => l.category === cat), container = document.getElementById(`previews-${cat}`);
+            if (items.length === 0) { container.innerHTML = `<p class="col-span-2 text-center text-[10px] text-gray-300 py-4 italic border border-dashed rounded-xl">未登録</p>`; return; }
+            container.innerHTML = items.map(item => `
                 <div class="bg-white border rounded-2xl p-2 space-y-2 relative shadow-sm text-center">
-                    <button type="button" onclick="confirmRemoveLuggageInForm(${item.id})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-2 shadow-lg z-10 flex items-center justify-center border-2 border-white w-9 h-9 active:scale-90 transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    <button type="button" onclick="confirmRemoveInForm(${item.id})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-2 border-2 border-white w-9 h-9 active:scale-90 transition flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
                     <div class="relative">
-                        <img src="${item.image}" onclick="openImagePreview('${item.image}', '${item.name}')" class="w-full h-24 object-cover rounded-xl border border-gray-100">
-                        <button type="button" onclick="openDrawModalInForm(${item.id})" class="absolute bottom-1 right-1 bg-blue-600 p-2 rounded-xl shadow-lg border border-white flex items-center gap-1 active:scale-90 transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>
+                        <img src="${item.image}" onclick="openImagePreview('${item.image}', '${item.name}')" class="w-full h-24 object-cover rounded-xl">
+                        <button type="button" onclick="openDrawInForm(${item.id})" class="absolute bottom-1 right-1 bg-blue-600 p-2 rounded-xl shadow border border-white active:scale-90 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>
                         </button>
                     </div>
-                    <input type="text" value="${item.name}" onchange="updateLuggageFieldInForm(${item.id}, 'name', this.value)" placeholder="品名" class="w-full text-[10px] p-2 border border-blue-100 rounded-lg outline-none focus:ring-1 focus:ring-blue-500 bg-blue-50/30 text-center">
-                    <select onchange="updateLuggageFieldInForm(${item.id}, 'location', this.value)" class="w-full text-[10px] p-2 border border-gray-100 rounded-lg bg-gray-50 outline-none text-center">
-                        ${LOCATIONS.map(loc => `<option value="${loc}" ${item.location === loc ? 'selected' : ''}>${loc}</option>`).join('')}
-                    </select>
-                </div>
-            `).join('');
+                    <input type="text" value="${item.name}" onchange="updateLField(${item.id}, this.value)" placeholder="品名" class="w-full text-[10px] p-2 border border-blue-100 rounded-lg bg-blue-50/30 text-center outline-none">
+                </div>`).join('');
         });
-        refreshIcons();
     }
 
-    window.updateLuggageFieldInForm = (id, field, val) => {
-        const item = currentLuggageFiles.find(l => l.id === id);
-        if (item) item[field] = val;
-    };
-
-    window.confirmRemoveLuggageInForm = (id) => {
-        showCustomModal({ title: '削除確認', message: 'この荷物の登録を取り消しますか？', icon: '<i data-lucide="trash-2" class="text-red-500 w-8 h-8"></i>', confirmText: '削除', confirmColor: 'bg-red-500', onConfirm: () => { currentLuggageFiles = currentLuggageFiles.filter(l => l.id !== id); renderCurrentLuggageInForm(); } });
-    };
+    window.updateLField = (id, val) => { const item = currentLuggageFiles.find(l => l.id === id); if (item) item.name = val; };
+    window.confirmRemoveInForm = (id) => { showCustomModal({ title: '削除確認', message: 'この写真を削除しますか？', icon: '<i data-lucide="trash-2" class="text-red-500 w-8 h-8"></i>', confirmText: '削除', confirmColor: 'bg-red-500', onConfirm: () => { currentLuggageFiles = currentLuggageFiles.filter(l => l.id !== id); renderCurrentLuggageInForm(); } }); };
 
     document.getElementById('save-user').onclick = async () => {
         const name = document.getElementById('reg-name').value.trim(), staff = document.getElementById('reg-staff').value.trim(), dateVal = document.getElementById('reg-date').value;
         let errs = [];
-        if (!name) errs.push("利用者氏名"); if (!dateVal) errs.push("入居日"); if (!staff) errs.push(editingUserId ? "編集者名" : "担当者名"); if (currentLuggageFiles.length === 0) errs.push("荷物の写真（1つ以上）");
+        if (!name) errs.push("氏名"); if (!dateVal) errs.push("入居日"); if (!staff) errs.push("担当者名"); if (currentLuggageFiles.length === 0) errs.push("写真1枚以上");
         if (errs.length > 0) { showCustomModal({ title: '入力不足', message: `以下を入力してください：\n・${errs.join('\n・')}`, icon: '<i data-lucide="alert-circle" class="text-orange-500 w-8 h-8"></i>', confirmText: '確認', onConfirm: () => {} }); return; }
         const ts = new Date(dateVal).getTime(), now = Date.now();
         if (editingUserId) {
@@ -391,10 +268,9 @@
                 const old = users[idx]; let diff = [];
                 if (old.name !== name) diff.push({label: "氏名", old: old.name, new: name});
                 if (old.checkinDate !== ts) diff.push({label: "入居日", old: new Date(old.checkinDate).toLocaleDateString(), new: new Date(ts).toLocaleDateString()});
-                if (old.luggage.length !== currentLuggageFiles.length) diff.push({label: "荷物数の変更", old: `${old.luggage.length}件`, new: `${currentLuggageFiles.length}件`});
+                if (old.luggage.length !== currentLuggageFiles.length) diff.push({label: "枚数変更", old: `${old.luggage.length}枚`, new: `${currentLuggageFiles.length}枚`});
                 users[idx].name = name; users[idx].checkinDate = ts; users[idx].luggage = JSON.parse(JSON.stringify(currentLuggageFiles));
-                users[idx].lastEditStaff = staff; users[idx].lastEditDate = now;
-                if (!users[idx].history) users[idx].history = []; users[idx].history.push({ date: now, staff, action: diff.length > 0 ? "情報の修正" : "更新", diff });
+                if (!users[idx].history) users[idx].history = []; users[idx].history.push({ date: now, staff, action: "情報の修正", diff });
             }
         } else {
             users.unshift({ id: now, name, staff, luggage: JSON.parse(JSON.stringify(currentLuggageFiles)), status: 'in', checkinDate: ts, history: [{ date: now, staff, action: "新規登録", diff: [] }] });
@@ -404,15 +280,12 @@
 
     function renderUserList() {
         const container = document.getElementById('user-list-container'), filtered = users.filter(u => u.status === currentTab);
-        if (filtered.length === 0) { container.innerHTML = `<div class="text-center py-24 text-gray-300 text-sm italic">データがありません</div>`; return; }
+        if (filtered.length === 0) { container.innerHTML = `<p class="text-center py-20 text-gray-300 italic">データがありません</p>`; return; }
         container.innerHTML = filtered.map(user => `
-            <div onclick="viewUserDetails(${user.id})" class="bg-white p-4 rounded-3xl ios-shadow flex items-center gap-4 active:scale-95 transition cursor-pointer border border-gray-100 text-left">
+            <div onclick="viewUserDetails(${user.id})" class="bg-white p-4 rounded-3xl ios-shadow flex items-center gap-4 border border-gray-100 active:scale-95 transition cursor-pointer">
                 <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center shrink-0"><i data-lucide="user"></i></div>
-                <div class="flex-1 min-w-0">
-                    <h3 class="font-bold text-lg truncate text-gray-800 leading-tight">${user.name}</h3>
-                    <p class="text-[10px] text-gray-400 mt-1">入居日: ${new Date(user.checkinDate).toLocaleDateString()}</p>
-                </div>
-                ${user.status === 'in' ? `<button onclick="event.stopPropagation(); editUser(${user.id})" class="flex items-center gap-1 bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-xs font-bold border border-blue-100 active:bg-blue-100 transition">編集</button>` : `<div class="text-gray-300"><i data-lucide="chevron-right"></i></div>`}
+                <div class="flex-1 min-w-0 text-left"><h3 class="font-bold text-lg truncate text-gray-800 leading-tight">${user.name}</h3><p class="text-[10px] text-gray-400 mt-1">入居日: ${new Date(user.checkinDate).toLocaleDateString()}</p></div>
+                ${user.status === 'in' ? `<button onclick="event.stopPropagation(); editUser(${user.id})" class="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-xs font-bold border border-blue-100 active:bg-blue-100 transition">編集</button>` : `<i data-lucide="chevron-right" class="text-gray-300"></i>`}
             </div>`).join('');
         refreshIcons();
     }
@@ -420,73 +293,88 @@
     window.viewUserDetails = (userId) => {
         const user = users.find(u => u.id === userId); if (!user) return;
         const logs = user.history ? user.history.slice().reverse() : [];
-        const luggageGroupsHtml = CATEGORIES.map(cat => {
+        const luggageGroups = CATEGORIES.map(cat => {
             const items = user.luggage.filter(l => l.category === cat);
             if (items.length === 0) return '';
-            return `<div class="space-y-3"><p class="text-xs font-black text-blue-500 uppercase tracking-widest pl-1">${cat}</p><div class="grid grid-cols-1 gap-3">
+            return `<div class="space-y-3 text-left"><p class="text-xs font-black text-blue-500 uppercase tracking-widest border-b pb-1 border-blue-50">${cat}</p><div class="grid grid-cols-1 gap-3">
                 ${items.map(item => {
-                    const lugIdxInUser = user.luggage.findIndex(l => l.id === item.id);
-                    return `<div class="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm text-left"><img src="${item.image}" onclick="openImagePreview('${item.image}', '${item.name || cat}')" class="w-16 h-16 object-cover rounded-xl shrink-0 shadow-sm cursor-zoom-in border border-white"><div class="flex-1 min-w-0"><div class="flex items-center gap-2 mb-1"><span class="text-[9px] font-bold bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">${item.location}</span></div><p class="font-bold text-sm text-gray-800 truncate">${item.name || ''}</p></div>
-                        ${user.status === 'in' ? `<input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleCheck(${user.id}, ${lugIdxInUser})" class="w-8 h-8 rounded-full border-gray-300 accent-blue-600 cursor-pointer">` : (item.checked ? `<div class="text-green-500"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>` : `<div class="text-gray-200"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-30"><circle cx="12" cy="12" r="10"></circle></svg></div>`)}</div>`;
+                    const lIdx = user.luggage.findIndex(l => l.id === item.id);
+                    return `<div class="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100 text-left shadow-sm">
+                        <img src="${item.image}" onclick="openImagePreview('${item.image}', '${item.name || cat}')" class="w-16 h-16 object-cover rounded-xl shrink-0 cursor-zoom-in border border-white">
+                        <div class="flex-1 min-w-0 font-bold text-sm text-gray-800 truncate">${item.name || ''}</div>
+                        ${user.status === 'in' ? `<input type="checkbox" ${item.checked ? 'checked' : ''} onchange="toggleCheck(${user.id}, ${lIdx})" class="w-8 h-8 rounded-full accent-blue-600">` : (item.checked ? `<div class="text-green-500 font-bold">☑</div>` : `<div class="text-gray-300 opacity-30">◯</div>`)}
+                    </div>`;
                 }).join('')}</div></div>`;
         }).join('');
-        const historyHtml = `<div class="space-y-3 text-left"><p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">履歴（タップで詳細確認）</p><div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 max-h-48 overflow-y-auto space-y-4 shadow-inner">${logs.map((h, i) => `<div onclick="openHistoryDetail(${user.id}, ${user.history.length - 1 - i})" class="flex gap-3 relative cursor-pointer active:opacity-60 transition pb-4 last:pb-0 text-left"><div class="w-[24px] h-[24px] bg-white border-2 border-blue-500 rounded-full flex items-center justify-center shrink-0 z-10 shadow-sm"><div class="w-2 h-2 bg-blue-500 rounded-full"></div></div><div class="flex-1 min-w-0"><div class="flex justify-between items-start mb-1"><span class="text-[9px] font-black text-gray-400 uppercase">${new Date(h.date).toLocaleDateString()}</span><span class="text-[9px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold">${h.staff}</span></div><p class="text-[11px] text-gray-700 font-medium truncate">${h.action}</p></div></div>`).join('')}</div></div>`;
-        document.getElementById('detail-container').innerHTML = `<div class="bg-white p-6 rounded-3xl ios-shadow space-y-6 border border-gray-100 min-h-[85vh] text-center"><div class="flex items-center gap-4 border-b pb-4 text-left"><div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center shrink-0"><i data-lucide="user" class="w-8 h-8"></i></div><div class="flex-1 min-w-0 text-left"><h2 class="text-xl font-black text-gray-800 truncate leading-tight">${user.name}</h2><p class="text-xs text-blue-500 font-bold mt-1">入居日: ${new Date(user.checkinDate).toLocaleDateString()}</p></div>${user.status === 'in' ? `<button onclick="editUser(${user.id})" class="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-xs font-bold transition active:scale-90 border border-blue-100">修正</button>` : ''}</div>${historyHtml}<div class="space-y-6">${luggageGroupsHtml}</div>${user.status === 'in' ? `<div class="border-t pt-6 space-y-4"><input type="text" id="checkout-staff" class="w-full border-0 bg-gray-50 rounded-xl p-4 text-sm outline-none focus:ring-2 focus:ring-green-500 text-center font-bold" placeholder="退居確認スタッフ名を入力"><button onclick="processCheckout(${user.id})" class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold text-base shadow-lg active:scale-95 transition">退居処理を完了する</button></div>` : `<div class="space-y-4"><div class="bg-blue-600 p-5 rounded-2xl text-white shadow-md text-left"><p class="text-[10px] font-bold uppercase opacity-80 mb-1">退居済み</p><div class="flex justify-between items-end"><div class="text-left"><p class="text-xs font-bold">${user.checkoutStaff}</p><p class="text-[10px] opacity-70">${new Date(user.checkoutDate).toLocaleString()}</p></div><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-40"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div></div><button onclick="restoreUser(${user.id})" class="w-full bg-white border border-blue-200 text-blue-600 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition shadow-sm"><i data-lucide="rotate-ccw" class="w-4 h-4"></i>利用中に戻す</button></div>`}<div class="flex flex-col gap-2 pt-6"><button onclick="showView('list')" class="w-full bg-gray-100 text-gray-500 py-3 rounded-xl font-bold text-xs italic">一覧に戻る</button><button onclick="deleteInDetail(${userId})" class="text-red-400 text-[10px] mt-4 font-bold flex items-center justify-center gap-1 transition active:opacity-60"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>データを完全に削除</button></div></div>`;
+
+        const historyHtml = `<div class="space-y-3 text-left"><p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">履歴（タップで詳細確認）</p><div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 max-h-48 overflow-y-auto space-y-4 shadow-inner">${logs.map((h, i) => `<div onclick="openHistoryDetail(${user.id}, ${user.history.length-1-i})" class="flex gap-3 relative cursor-pointer active:opacity-60 transition pb-4 text-left"><div class="w-6 h-6 bg-white border-2 border-blue-500 rounded-full flex items-center justify-center shrink-0 z-10"><div class="w-2 h-2 bg-blue-500 rounded-full"></div></div><div class="flex-1 min-w-0"><div class="flex justify-between items-start mb-1"><span class="text-[9px] font-black text-gray-400 uppercase">${new Date(h.date).toLocaleDateString()}</span><span class="text-[9px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold">${h.staff}</span></div><p class="text-[11px] text-gray-700 font-medium truncate">${h.action}</p></div></div>`).join('')}</div></div>`;
+
+        document.getElementById('detail-container').innerHTML = `
+            <div class="bg-white p-6 rounded-3xl ios-shadow space-y-6 border border-gray-100 min-h-[85vh]">
+                <div class="flex items-center gap-4 border-b pb-4 text-left">
+                    <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center shrink-0"><i data-lucide="user" class="w-8 h-8"></i></div>
+                    <div class="flex-1 min-w-0"><h2 class="text-xl font-black text-gray-800 leading-tight">${user.name}</h2><p class="text-xs text-blue-500 font-bold mt-1">入居日: ${new Date(user.checkinDate).toLocaleDateString()}</p></div>
+                    ${user.status === 'in' ? `<button onclick="editUser(${user.id})" class="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-xs font-bold border border-blue-100 active:scale-90 transition">修正</button>` : ''}
+                </div>
+                ${historyHtml}<div class="space-y-8">${luggageGroups}</div>
+                ${user.status === 'in' ? `<div class="border-t pt-6 space-y-4"><input type="text" id="checkout-staff" class="w-full border-0 bg-gray-50 rounded-xl p-4 text-sm outline-none focus:ring-2 focus:ring-green-500 text-center font-bold" placeholder="スタッフ名を入力"><button onclick="processCheckout(${user.id})" class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold active:scale-95 transition">退居処理を完了</button></div>` : `<div class="bg-blue-600 p-5 rounded-2xl text-white text-left shadow-md mb-4"><p class="text-[10px] font-bold opacity-80 uppercase mb-1">退居済み</p><div class="flex justify-between items-end"><div><p class="text-xs font-bold">${user.checkoutStaff}</p><p class="text-[10px] opacity-70">${new Date(user.checkoutDate).toLocaleString()}</p></div><i data-lucide="check-circle" class="opacity-40"></i></div></div><button onclick="restoreUser(${user.id})" class="w-full bg-white border border-blue-200 text-blue-600 py-3 rounded-2xl font-bold active:scale-95 transition shadow-sm">利用中に戻す</button>`}
+                <div class="flex flex-col gap-2 pt-6"><button onclick="showView('list')" class="w-full bg-gray-100 text-gray-500 py-3 rounded-xl font-bold text-xs italic">一覧に戻る</button><button onclick="deleteInDetail(${user.id})" class="text-red-400 text-[10px] mt-4 font-bold flex items-center justify-center gap-1 active:opacity-60 transition"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>データを完全に削除</button></div>
+            </div>`;
         showView('detail'); refreshIcons();
     };
 
-    window.editUser = (userId) => {
-        const user = users.find(u => u.id === userId); if (!user || user.status !== 'in') return;
-        editingUserId = userId; document.getElementById('form-title').innerText = "情報の修正";
-        document.getElementById('reg-name').value = user.name; document.getElementById('reg-date').value = formatDateForInput(user.checkinDate);
-        document.getElementById('reg-staff').value = ""; currentLuggageFiles = JSON.parse(JSON.stringify(user.luggage));
-        renderRegistrationForm(); document.getElementById('delete-user-btn').classList.remove('hidden'); showView('form');
-    };
-
+    window.editUser = (userId) => { const user = users.find(u => u.id === userId); if (!user || user.status !== 'in') return; editingUserId = userId; document.getElementById('form-title').innerText = "情報の修正"; document.getElementById('reg-name').value = user.name; document.getElementById('reg-date').value = formatDateForInput(user.checkinDate); document.getElementById('reg-staff').value = ""; currentLuggageFiles = JSON.parse(JSON.stringify(user.luggage)); renderRegistrationForm(); document.getElementById('delete-user-btn').classList.remove('hidden'); showView('form'); };
     window.toggleCheck = (uId, lIdx) => { const u = users.find(x => x.id === uId); if (u) { u.luggage[lIdx].checked = !u.luggage[lIdx].checked; saveToDB(); } };
 
+    async function cleanOldData() { const now = Date.now(), sixtyDaysMs = 60 * 24 * 60 * 60 * 1000; users = users.filter(user => { if (user.status === 'out' && user.checkoutDate) { return (now - user.checkoutDate) < sixtyDaysMs; } return true; }); await saveToDB(); }
+
     function initDrawingCanvas() {
-        const canvas = document.getElementById('draw-canvas'); if (!canvas) return; ctx = canvas.getContext('2d');
-        const startDraw = (e) => { isDrawing = true; const pos = getMousePos(canvas, e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y); ctx.strokeStyle = penColor; ctx.lineWidth = 4; ctx.lineCap = 'round'; };
-        const draw = (e) => { if (!isDrawing) return; const pos = getMousePos(canvas, e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); };
-        const endDraw = () => { isDrawing = false; };
-        canvas.addEventListener('mousedown', startDraw); canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseup', endDraw);
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e.touches[0]); }, {passive: false});
-        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); }, {passive: false});
-        canvas.addEventListener('touchend', endDraw);
+        const cvs = document.getElementById('draw-canvas'); if (!cvs) return; ctx = cvs.getContext('2d');
+        const sDraw = (e) => { isDrawing = true; const p = getMousePos(cvs, e); ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.strokeStyle = penColor; ctx.lineWidth = 4; ctx.lineCap = 'round'; };
+        const draw = (e) => { if (!isDrawing) return; const p = getMousePos(cvs, e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
+        const eDraw = () => { isDrawing = false; };
+        cvs.addEventListener('mousedown', sDraw); cvs.addEventListener('mousemove', draw); cvs.addEventListener('mouseup', eDraw);
+        cvs.addEventListener('touchstart', (e) => { e.preventDefault(); sDraw(e.touches[0]); }, {passive: false});
+        cvs.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); }, {passive: false});
+        cvs.addEventListener('touchend', eDraw);
     }
 
-    function openDrawModalInForm(lugId) {
+    function openDrawInForm(lugId) {
         const itemIdx = currentLuggageFiles.findIndex(l => l.id === lugId); if (itemIdx === -1) return;
-        drawingIdx = itemIdx; const modal = document.getElementById('draw-modal'), canvas = document.getElementById('draw-canvas'), img = new Image();
+        drawingIdx = itemIdx; const m = document.getElementById('draw-modal'), cvs = document.getElementById('draw-canvas'), img = new Image();
         img.src = currentLuggageFiles[drawingIdx].image;
-        img.onload = () => { const sw = window.innerWidth, sh = window.innerHeight * 0.7, ratio = Math.min(sw / img.width, sh / img.height); canvas.width = img.width * ratio; canvas.height = img.height * ratio; ctx.drawImage(img, 0, 0, canvas.width, canvas.height); modal.classList.remove('modal-hidden'); refreshIcons(); };
+        img.onload = () => { const sw = window.innerWidth, sh = window.innerHeight * 0.7, ratio = Math.min(sw / img.width, sh / img.height); cvs.width = img.width * ratio; cvs.height = img.height * ratio; ctx.drawImage(img, 0, 0, cvs.width, cvs.height); m.classList.remove('modal-hidden'); refreshIcons(); };
     }
 
     window.setPenColor = (c) => { penColor = c; };
-    window.confirmClearCanvas = () => { showCustomModal({ title: 'リセット', message: '書き込みを消去しますか？', icon: '<i data-lucide="rotate-ccw"></i>', confirmText: '消去', confirmColor: 'bg-red-500', onConfirm: () => { const canvas = document.getElementById('draw-canvas'), img = new Image(); img.src = currentLuggageFiles[drawingIdx].image; img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height); } }); };
+    window.confirmClearCanvas = () => { showCustomModal({ title: 'リセット', message: '書き込みを消去しますか？', icon: '<i data-lucide="rotate-ccw"></i>', confirmText: '消去', confirmColor: 'bg-red-500', onConfirm: () => { const cvs = document.getElementById('draw-canvas'), img = new Image(); img.src = currentLuggageFiles[drawingIdx].image; img.onload = () => ctx.drawImage(img, 0, 0, cvs.width, cvs.height); } }); };
     window.closeDrawModal = () => document.getElementById('draw-modal').classList.add('modal-hidden');
     window.saveDrawing = () => { currentLuggageFiles[drawingIdx].image = document.getElementById('draw-canvas').toDataURL('image/jpeg', 0.8); renderCurrentLuggageInForm(); closeDrawModal(); };
+
     window.processCheckout = async (uId) => {
-        const user = users.find(x => x.id === uId), s = document.getElementById('checkout-staff').value.trim();
-        if (!s) { showCustomModal({ title: '確認', message: '確認スタッフ名を入力してください。', icon: '<i data-lucide="user-x"></i>', confirmText: 'OK', onConfirm: () => {} }); return; }
-        const un = user.luggage.filter(l => !l.checked);
-        if (un.length > 0) showCustomModal({ title: '未チェック', message: `${un.length}件未チェックですが完了しますか？`, icon: '<i data-lucide="alert-triangle"></i>', confirmText: '完了', confirmColor: 'bg-green-600', onConfirm: () => finalize(user, s) });
-        else finalize(user, s);
+        const u = users.find(x => x.id === uId), s = document.getElementById('checkout-staff').value.trim();
+        if (!s) { showCustomModal({ title: '確認', message: 'スタッフ名を入力してください。', icon: '<i data-lucide="user-x"></i>', confirmText: 'OK', onConfirm: () => {} }); return; }
+        const un = u.luggage.filter(l => !l.checked);
+        if (un.length > 0) showCustomModal({ title: '未チェック', message: `${un.length}件未チェックですが完了しますか？`, icon: '<i data-lucide="alert-triangle"></i>', confirmText: '完了', confirmColor: 'bg-green-600', onConfirm: () => finalize(u, s) });
+        else finalize(u, s);
     };
+
     function finalize(u, s) { u.status = 'out'; u.checkoutStaff = s; u.checkoutDate = Date.now(); if (!u.history) u.history = []; u.history.push({ date: Date.now(), staff: s, action: "退居完了", diff: [] }); saveToDB(); showView('list'); }
-    window.restoreUser = async (uId) => { showCustomModal({ title: '利用中に戻す', message: '利用中の状態に戻しますか？', icon: '<i data-lucide="rotate-ccw"></i>', confirmText: '戻す', onConfirm: () => { const u = users.find(x => x.id === uId); if (u) { u.status = 'in'; u.checkoutDate = null; u.checkoutStaff = ''; if (!u.history) u.history = []; u.history.push({ date: Date.now(), staff: "システム", action: "利用中に復帰", diff: [] }); saveToDB(); showView('list'); } } }); };
-    window.openHistoryDetail = (userId, idx) => {
-        const u = users.find(x => x.id === userId); if (!u || !u.history[idx]) return;
+    window.restoreUser = async (uId) => { showCustomModal({ title: '復帰確認', message: '利用中に戻しますか？', icon: '<i data-lucide="rotate-ccw"></i>', confirmText: '戻す', onConfirm: () => { const u = users.find(x => x.id === uId); if (u) { u.status = 'in'; u.checkoutDate = null; u.checkoutStaff = ''; if (!u.history) u.history = []; u.history.push({ date: Date.now(), staff: "システム", action: "利用中に復帰", diff: [] }); saveToDB(); showView('list'); } } }); };
+    
+    window.openHistoryDetail = (uId, idx) => {
+        const u = users.find(x => x.id === uId); if (!u || !u.history[idx]) return;
         const e = u.history[idx], m = document.getElementById('history-modal'), c = document.getElementById('history-detail-content');
-        let diffHtml = e.diff && e.diff.length > 0 ? e.diff.map(d => `<div class="bg-white border rounded-xl p-3 space-y-1 shadow-sm"><p class="text-[10px] font-bold text-blue-500 uppercase">${d.label}</p><div class="flex flex-col gap-1"><span class="diff-removed text-xs">${d.old}</span><div class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 10 20 15 15 20"></polyline><path d="M4 4v7a4 4 0 0 0 4 4h12"></path></svg><span class="diff-added text-xs font-bold">${d.new}</span></div></div></div>`).join('') : `<p class="text-center py-4 text-gray-400 text-sm italic">${e.action}</p>`;
-        c.innerHTML = `<div class="text-center pb-2"><p class="text-xs text-gray-400">${new Date(e.date).toLocaleString()}</p><p class="font-bold text-gray-800">担当：${e.staff}</p></div><div class="space-y-3"><p class="text-xs font-bold text-gray-500 border-l-4 border-blue-500 pl-2">修正箇所</p>${diffHtml}</div>`;
+        let diffHtml = e.diff && e.diff.length > 0 ? e.diff.map(d => `<div class="bg-white border rounded-xl p-3 space-y-1 shadow-sm"><p class="text-[10px] font-bold text-blue-500 uppercase">${d.label}</p><div class="flex flex-col gap-1 text-sm"><span class="diff-removed">${d.old}</span><div class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 10 20 15 15 20"></polyline><path d="M4 4v7a4 4 0 0 0 4 4h12"></path></svg><span class="diff-added font-bold">${d.new}</span></div></div></div>`).join('') : `<p class="text-center py-4 text-gray-400 italic text-sm">${e.action}</p>`;
+        c.innerHTML = `<div class="text-center pb-2"><p class="text-xs text-gray-400">${new Date(e.date).toLocaleString()}</p><p class="font-bold">担当：${e.staff}</p></div><div class="space-y-3">${diffHtml}</div>`;
         m.classList.remove('modal-hidden'); refreshIcons();
     };
+
     window.closeHistoryModal = () => document.getElementById('history-modal').classList.add('modal-hidden');
     window.openImagePreview = (src, cap) => { document.getElementById('modal-img').src = src; document.getElementById('modal-caption').innerText = cap || "写真"; document.getElementById('image-modal').classList.remove('modal-hidden'); };
     window.closeImagePreview = () => document.getElementById('image-modal').classList.add('modal-hidden');
-    window.deleteInDetail = (uId) => { showCustomModal({ title: 'データを削除', message: '完全に削除しますか？', icon: '<i data-lucide="trash-2"></i>', confirmText: '削除', confirmColor: 'bg-red-500', onConfirm: () => { users = users.filter(u => u.id !== uId); saveToDB(); showView('list'); } }); };
+    window.deleteInDetail = (uId) => { showCustomModal({ title: '完全削除', message: 'この利用者の全データを削除します。復元できません。', icon: '<i data-lucide="trash-2"></i>', confirmText: '削除', confirmColor: 'bg-red-500', onConfirm: () => { users = users.filter(u => u.id !== uId); saveToDB(); showView('list'); } }); };
+
     document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
